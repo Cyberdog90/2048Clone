@@ -6,10 +6,10 @@ from random import choice, randint
 
 
 def main():
-    ip = "127.0.0.1"
-    port = 54543
-    srv = Server(ip=ip, port=port)
+    ip = "localhost"
+    port = 9001
     game = Game()
+    srv = Server(ip=ip, port=port, game=game)
     gui = GUI(ip=ip, port=port, game=game)
 
     psg.theme("BrightColors")
@@ -43,6 +43,7 @@ def main():
 
         window = gui.update(window)
     window.close()
+    srv.close()
 
 
 class Game:
@@ -244,14 +245,14 @@ class GUI:
 
 
 class Server:
-    def __init__(self, ip: str, port: int, timeout=3, callback=None):
+    def __init__(self, ip: str, port: int, timeout=3, game=None):
         self.address = (ip, port)
         self.buffer_size = 4096
         self.connecting = True
         self.connection = None
         self.timeout = timeout
         self.thread = None
-        self.callback = callback
+        self.game = game
 
     def run_server(self):
         self.thread = threading.Thread(target=self.__server_th)
@@ -274,11 +275,20 @@ class Server:
                 self.connection.close()
                 self.connection = None
 
-    def on_receive(self, s):
-        if self.callback is not None:
-            self.callback(s)
-        else:
-            print(s)
+    def on_receive(self, s: bytes):
+        data = s.decode().upper()
+        if self.game is not None:
+            if data == "W":
+                self.game.game_input(self.game.UP)
+
+            if data == "S":
+                self.game.game_input(self.game.DOWN)
+
+            if data == "A":
+                self.game.game_input(self.game.LEFT)
+
+            if data == "D":
+                self.game.game_input(self.game.RIGHT)
 
     def send(self, s):
         if self.connection is not None:
